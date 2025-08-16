@@ -153,6 +153,27 @@ if (NOT GGML_BACKEND_DL)
     llama_target_and_test(test-rope.cpp)
     # T-MAC LUT construction invariants (no-op if GGML_TMAC not defined)
     llama_target_and_test(test-tmac-lut.cpp)
+    if (TARGET test-tmac-lut)
+        # Ensure we link against ggml so that lut_ctor_int8_g4 is available
+        target_link_libraries(test-tmac-lut PRIVATE ggml)
+        # Also link directly to cpu backend to ensure T-MAC symbols resolve
+        if (TARGET ggml-cpu)
+            target_link_libraries(test-tmac-lut PRIVATE ggml-cpu)
+            if (GGML_TMAC)
+                # Ensure the cpu backend itself is built with the testing wrapper enabled
+                target_compile_definitions(ggml-cpu PRIVATE GGML_TMAC_TESTING)
+            endif()
+        endif()
+        # Add internal ggml cpu source include paths so nested includes in tmac headers resolve
+        target_include_directories(test-tmac-lut PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/../ggml/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/../ggml/src/ggml-cpu)
+        # Propagate compile definition if T-MAC enabled so test sees GGML_USE_TMAC
+        if (GGML_TMAC)
+            target_compile_definitions(test-tmac-lut PRIVATE GGML_USE_TMAC)
+            target_compile_definitions(test-tmac-lut PRIVATE GGML_TMAC_TESTING)
+        endif()
+    endif()
 endif()
 
 

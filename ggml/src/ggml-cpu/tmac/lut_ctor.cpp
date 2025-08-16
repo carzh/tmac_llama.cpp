@@ -248,7 +248,8 @@ int32_t partial_max_reset(void* lut_scales_) {
 #endif
 
 
-void lut_ctor_int8_g4(void* B, void* LUT_Scales, void* LUT_Biases, void* QLUT, int K, const struct tmac_kernel_config * const kernel_config) {
+// Definition needs C linkage to match the header (declared inside extern "C")
+extern "C" void lut_ctor_int8_g4(void* B, void* LUT_Scales, void* LUT_Biases, void* QLUT, int K, const struct tmac_kernel_config * const kernel_config) {
     // TODO: handle bitnet here
 
     int act_group_size = kernel_config->act_group_size;

@@ -1065,6 +1065,13 @@ static inline void ggml_tmac_mul_mat_task_init(void * src1, void * qlut, void * 
     lut_ctor_int8_g4(src1, lut_scales, lut_biases, qlut, k, kernel_config);
 }
 
+#ifdef GGML_TMAC_TESTING
+extern "C" void ggml_tmac_mul_mat_task_init_for_test(void * src1, void * qlut, void * lut_scales, void * lut_biases,
+                                                     int n, int k, int m, int bits) {
+    ggml_tmac_mul_mat_task_init(src1, qlut, lut_scales, lut_biases, n, k, m, bits);
+}
+#endif
+
 static inline void ggml_tmac_mul_mat_task_compute(void * src0, void * scales, void * qlut, void * lut_scales, void * lut_biases, void * dst, int n, int k, int m, int bits) {
     struct tmac_kernel_config * kernel_config = find_tmac_kernel_config(n, k, bits);
     if (kernel_config == nullptr) {

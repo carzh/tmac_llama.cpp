@@ -7,6 +7,7 @@
 #include "ggml-cpu-traits.h"
 
 #include <unordered_map>
+#include <string>
 
 static const int GGML_TMAC_MAX_NODES = 8192;
 struct tmac_tensor_extra {
@@ -65,6 +66,12 @@ void ggml_backend_tmac_convert_weight(struct ggml_tensor * tensor, const void * 
 bool ggml_tmac_can_mul_mat(const struct ggml_tensor * dst);
 
 void ggml_backend_tmac_mul_mat(const struct ggml_compute_params * params, struct ggml_tensor * dst);
+
+#ifdef GGML_TMAC_TESTING
+// Test-only wrapper to call internal LUT construction initialization path used in mul_mat
+void ggml_tmac_mul_mat_task_init_for_test(void * src1, void * qlut, void * lut_scales, void * lut_biases,
+                                          int n, int k, int m, int bits);
+#endif
 
 #ifdef __cplusplus
 }

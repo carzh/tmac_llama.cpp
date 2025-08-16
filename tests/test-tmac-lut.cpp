@@ -10,8 +10,12 @@
 #include "ggml.h"
 #include "ggml-cpu.h"
 
-// Internal T-MAC header (guarded by GGML_USE_TMAC in build). We include via relative path.
-#include "ggml-cpu/tmac/lut_ctor.h"
+// Internal T-MAC header (only available when GGML_TMAC enabled). Not exported via public includes.
+// Use relative path into ggml/src. Guard so non-TMAC builds still compile (test will skip in main()).
+#ifdef GGML_USE_TMAC
+#include "../ggml/src/ggml-cpu/tmac/lut_ctor.h"
+#include "../ggml/src/ggml-cpu/tmac/lut_mul_mat.h"
+#endif
 
 static void fill_pattern(std::vector<tmac_float_type> & data) {
     for (size_t i = 0; i < data.size(); ++i) {
@@ -55,7 +59,27 @@ static int run_case(int bits, int K, int act_group_size) {
     cfg.simd_n_in = 16; // typical defaults; not used directly here
     cfg.simd_n_out = 8;
 
+    // Primary path: direct LUT ctor
     lut_ctor_int8_g4(B.data(), LUT_Scales.data(), LUT_Biases.data(), QLUT.data(), K, &cfg);
+
+#ifdef GGML_TMAC_TESTING
+    // Also call internal init wrapper to ensure consistency; it builds LUT for a single (n,k,m) context.
+    // We fabricate dimensions: src1 activation buffer length K; choose n = m = 1 for simplicity.
+    std::vector<int8_t> QLUT_task(QLUT.size(), 0);
+    std::vector<tmac_float_type> LUT_Scales_task(LUT_Scales.size(), 0), LUT_Biases_task(LUT_Biases.size(), 0);
+    ggml_tmac_mul_mat_task_init_for_test(B.data(), QLUT_task.data(), LUT_Scales_task.data(), LUT_Biases_task.data(), /*n*/1, /*k*/K, /*m*/1, bits);
+    // Basic equivalence: constructed QLUT via internal path should match size and non-zero pattern.
+    if (QLUT_task.size() == QLUT.size()) {
+        bool any_diff = false;
+        for (size_t i = 0; i < QLUT.size(); ++i) {
+            if (QLUT_task[i] != 0 && QLUT[i] == 0) { any_diff = true; break; }
+        }
+        if (any_diff) {
+            fprintf(stderr, "Internal task init produced unexpected zero/non-zero pattern compared to direct ctor\n");
+            return 8;
+        }
+    }
+#endif
 
     // Invariants / sanity checks
     // 1. Scale must be > 0
