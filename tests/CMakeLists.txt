@@ -151,6 +151,8 @@ if (NOT GGML_BACKEND_DL)
     llama_target_and_test(test-quantize-fns.cpp)
     llama_target_and_test(test-quantize-perf.cpp)
     llama_target_and_test(test-rope.cpp)
+    # T-MAC LUT construction invariants (no-op if GGML_TMAC not defined)
+    llama_target_and_test(test-tmac-lut.cpp)
 endif()
 
 
